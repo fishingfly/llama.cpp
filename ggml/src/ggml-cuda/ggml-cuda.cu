@@ -1811,10 +1811,16 @@ static void ggml_cuda_mul_mat_batched_cublas(ggml_backend_cuda_context & ctx, co
         ggml_cuda_pool_alloc<const void *> ptrs_src(ctx.pool(), 2*ne23);
         ggml_cuda_pool_alloc<      void *> ptrs_dst(ctx.pool(), 1*ne23);
 
+        const void ** sptrs_src;
+        void ** sptrs_dst;
+
+        cudaMalloc((void*)&sptrs_src, sizeof(half{*}) *2 *  ne23);
+        cudaMalloc((void*)&sptrs_dst, sizeof(half{*}) * ne23);
+
         dim3 block_dims(ne13, ne12);
         k_compute_batched_ptrs<<<1, block_dims, 0, main_stream>>>(
                 src0_f16, src1_f16, dst_t,
-                ptrs_src.get(), ptrs_dst.get(),
+                 sptrs_src, sptrs_dst,
                 ne12, ne13,
                 ne23,
                 nb02, nb03,
@@ -1827,12 +1833,15 @@ static void ggml_cuda_mul_mat_batched_cublas(ggml_backend_cuda_context & ctx, co
         CUBLAS_CHECK(
         cublasGemmBatchedEx(ctx.cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N,
                 ne01, ne11, ne10,
-                alpha, (const void **) (ptrs_src.get() + 0*ne23), CUDA_R_16F,   nb01/nb00,
-                       (const void **) (ptrs_src.get() + 1*ne23), CUDA_R_16F,   nb11/nb10,
-                beta,  (      void **) (ptrs_dst.get() + 0*ne23), cu_data_type, ne01,
+                alpha, (const void **) (sptrs_src + 0*ne23), CUDA_R_16F,   nb01/nb00,
+                       (const void **) (sptrs_src + 1*ne23), CUDA_R_16F,   nb11/nb10,
+                beta,  (      void **) (sptrs_dst + 0*ne23), cu_data_type, ne01,
                 ne23,
                 cu_compute_type,
                 CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+        cudaFree(sptrs_src);
+
+        cudaFree(sptrs_dst);
     }
 #endif
 
