@@ -1814,8 +1814,8 @@ static void ggml_cuda_mul_mat_batched_cublas(ggml_backend_cuda_context & ctx, co
         const void ** sptrs_src;
         void ** sptrs_dst;
 
-        cudaMalloc((void*)&sptrs_src, sizeof(half*) *2 *  ne23);
-        cudaMalloc((void*)&sptrs_dst, sizeof(half*) *1* ne23);
+        cudaMalloc((void**)&sptrs_src, sizeof(half*) *2 *  ne23);
+        cudaMalloc((void**)&sptrs_dst, sizeof(half*) *1* ne23);
 
         dim3 block_dims(ne13, ne12);
         k_compute_batched_ptrs<<<1, block_dims, 0, main_stream>>>(
